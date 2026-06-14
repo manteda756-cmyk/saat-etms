@@ -1,62 +1,83 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-
-const DEMO_USERS = [
-  {
-    id: 1, name: 'Abebe Girma', email: 'employee@demo.et',
-    password: 'demo123', role: 'employee',
-    dept: 'Engineering', position: 'Software Engineer',
-  },
-  {
-    id: 2, name: 'Sara Tesfaye', email: 'manager@demo.et',
-    password: 'demo123', role: 'manager',
-    dept: 'Marketing', position: 'Marketing Manager',
-  },
-];
+import { signIn, signUp } from '../lib/auth';
 
 export default function Login({ onBack }) {
-  const { t, login, language, setLanguage, darkMode, setDarkMode } = useApp();
-  const [mode, setMode] = useState('login'); // login | register
+  const { t, language, setLanguage, darkMode, setDarkMode } = useApp();
+  const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', dept: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [info, setInfo] = useState('');
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
+    setError(''); setInfo('');
     setLoading(true);
-    setTimeout(() => {
-      const user = DEMO_USERS.find(u => u.email === form.email && u.password === form.password);
-      if (user) {
-        login(user);
-      } else {
-        setError('Invalid email or password. Try employee@demo.et or manager@demo.et with demo123');
-      }
+    try {
+      await signIn({ email: form.email, password: form.password });
+      // AppContext auth listener handles the rest
+    } catch (err) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    setError('');
+    setError(''); setInfo('');
     if (form.password !== form.confirm) {
       setError('Passwords do not match');
       return;
     }
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      login({
-        id: 99, name: form.name, email: form.email,
-        role: 'employee', dept: form.dept || 'General', position: 'Employee',
+    try {
+      await signUp({
+        email: form.email,
+        password: form.password,
+        fullName: form.name,
+        department: form.dept,
+        role: 'employee',
       });
+      setInfo('✅ Account created! Check your email to confirm, then sign in.');
+      setMode('login');
+    } catch (err) {
+      setError(err.message || 'Registration failed.');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
-  const quickLogin = (user) => {
+  // Quick demo: sign in with demo credentials
+  const handleDemoLogin = async (role) => {
+    setError(''); setInfo('');
     setLoading(true);
-    setTimeout(() => { login(user); setLoading(false); }, 600);
+    const email = role === 'manager' ? 'manager@demo.et' : 'employee@demo.et';
+    try {
+      await signIn({ email, password: 'Demo1234!' });
+    } catch {
+      // If demo user doesn't exist in Supabase, create and sign in
+      try {
+        await signUp({
+          email,
+          password: 'Demo1234!',
+          fullName: role === 'manager' ? 'Sara Tesfaye (Demo)' : 'Abebe Girma (Demo)',
+          department: role === 'manager' ? 'Marketing' : 'Engineering',
+          role,
+        });
+        await signIn({ email, password: 'Demo1234!' });
+      } catch (err2) {
+        setError('Demo login failed: ' + err2.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,67 +87,74 @@ export default function Login({ onBack }) {
         ? 'linear-gradient(135deg, #0f172a, #1e293b)'
         : 'linear-gradient(135deg, #f8fafc, #e2e8f0)',
     }}>
-      {/* Left panel - branding */}
+      {/* Left branding panel */}
       <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column',
+        flex: 1, minWidth: 320,
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f3460 100%)',
         padding: '48px', color: 'white',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        minWidth: 320,
       }}>
-        <div>
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 40 }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 12,
-              background: 'linear-gradient(135deg, #078930, #2563EB)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', fontWeight: 700, fontSize: 22,
-            }}>ሰ</div>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: '1.25rem' }}>ሰዓት ETMS</div>
-              <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Ethiopian Time Management</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 40 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: 'linear-gradient(135deg, #078930, #2563EB)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontWeight: 700, fontSize: 22,
+          }}>ሰ</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '1.25rem' }}>ሰዓት ETMS</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Ethiopian Time Management</div>
+          </div>
+        </div>
+
+        <div className="eth-stripe" style={{ marginBottom: 32, width: 80 }} />
+
+        <h2 style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>
+          Welcome to<br />Ethiopia's #1<br />Workforce Platform
+        </h2>
+        <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginBottom: 32 }}>
+          Powered by Supabase — real-time data, secure auth, and cloud storage for your team.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            { icon: '🔐', text: 'Secure Supabase Authentication' },
+            { icon: '☁️', text: 'Real-time cloud database' },
+            { icon: '📅', text: 'Ethiopian Calendar (EC) built-in' },
+            { icon: '🌍', text: 'English · አማርኛ · Afaan Oromoo' },
+          ].map((item, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>{item.icon}</span>
+              <span style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.8)' }}>{item.text}</span>
             </div>
-          </div>
+          ))}
+        </div>
 
-          <div className="eth-stripe" style={{ marginBottom: 32, width: 80 }} />
-
-          <h2 style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>
-            Welcome to<br />Ethiopia's #1<br />Workforce Platform
-          </h2>
-
-          <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginBottom: 32 }}>
-            Track ስራ ላይ የዋለ ሰዓት, reduce የባከነ ሰዓት, and manage your team with the Ethiopian Calendar built-in.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              { icon: '📅', text: 'Ethiopian Calendar (EC) built-in' },
-              { icon: '🌍', text: 'English · አማርኛ · Afaan Oromoo' },
-              { icon: '🤖', text: 'AI-powered productivity insights' },
-              { icon: '📊', text: 'Real-time dashboards & reports' },
-            ].map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 18 }}>{item.icon}</span>
-                <span style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.8)' }}>{item.text}</span>
-              </div>
-            ))}
-          </div>
+        {/* Supabase badge */}
+        <div style={{
+          marginTop: 40, padding: '10px 16px', borderRadius: 8,
+          background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+          display: 'flex', alignItems: 'center', gap: 8, width: 'fit-content',
+        }}>
+          <span style={{ fontSize: 18 }}>⚡</span>
+          <span style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.8)' }}>
+            Powered by Supabase
+          </span>
         </div>
       </div>
 
-      {/* Right panel - form */}
+      {/* Right form panel */}
       <div style={{
-        width: 480, padding: '48px 40px', display: 'flex', flexDirection: 'column',
-        justifyContent: 'center', background: 'var(--surface)',
-        boxShadow: '-4px 0 20px rgba(0,0,0,0.1)',
+        width: 480, padding: '48px 40px',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        background: 'var(--surface)', boxShadow: '-4px 0 20px rgba(0,0,0,0.1)',
       }}>
-        {/* Top bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 36 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
           <button className="btn btn-ghost btn-sm" onClick={onBack}>← Back</button>
           <div style={{ display: 'flex', gap: 6 }}>
             {['en', 'am', 'or'].map(code => (
-              <button key={code} className={`btn btn-sm ${language === code ? 'btn-primary' : 'btn-ghost'}`}
+              <button key={code}
+                className={`btn btn-sm ${language === code ? 'btn-primary' : 'btn-ghost'}`}
                 style={{ padding: '4px 10px', fontSize: '0.75rem' }}
                 onClick={() => setLanguage(code)}>
                 {code === 'en' ? 'EN' : code === 'am' ? 'አማ' : 'OR'}
@@ -138,7 +166,7 @@ export default function Login({ onBack }) {
           </div>
         </div>
 
-        <div className="tab-bar" style={{ marginBottom: 28, width: '100%' }}>
+        <div className="tab-bar" style={{ marginBottom: 24, width: '100%' }}>
           <button className={`tab-item${mode === 'login' ? ' active' : ''}`} style={{ flex: 1 }} onClick={() => setMode('login')}>
             {t('signIn')}
           </button>
@@ -150,14 +178,19 @@ export default function Login({ onBack }) {
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 4 }}>
           {mode === 'login' ? t('signIn') : t('signUp')}
         </h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: 24 }}>
-          {mode === 'login' ? 'Sign in to your Ethiopian Time Management account' : 'Create your account to get started'}
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: 20 }}>
+          {mode === 'login' ? 'Sign in to your ETMS account' : 'Create your account to get started'}
         </p>
 
         {error && (
-          <div className="alert alert-danger" style={{ marginBottom: 16 }}>
+          <div className="alert alert-danger" style={{ marginBottom: 14 }}>
             <span>⚠️</span>
             <span style={{ fontSize: '0.8125rem' }}>{error}</span>
+          </div>
+        )}
+        {info && (
+          <div className="alert alert-success" style={{ marginBottom: 14 }}>
+            <span style={{ fontSize: '0.8125rem' }}>{info}</span>
           </div>
         )}
 
@@ -170,13 +203,12 @@ export default function Login({ onBack }) {
             </div>
             <div className="form-group" style={{ position: 'relative' }}>
               <label className="form-label">{t('password')}</label>
-              <input type={showPw ? 'text' : 'password'} className="form-control" placeholder="••••••••"
-                value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} required />
+              <input type={showPw ? 'text' : 'password'} className="form-control"
+                placeholder="••••••••" value={form.password}
+                onChange={e => setForm(p => ({ ...p, password: e.target.value }))} required />
               <button type="button" className="btn btn-ghost btn-sm"
                 style={{ position: 'absolute', right: 4, top: 26, padding: '4px 8px' }}
-                onClick={() => setShowPw(!showPw)}>
-                {showPw ? '🙈' : '👁'}
-              </button>
+                onClick={() => setShowPw(!showPw)}>{showPw ? '🙈' : '👁'}</button>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', cursor: 'pointer' }}>
@@ -186,8 +218,9 @@ export default function Login({ onBack }) {
                 {t('forgotPassword')}
               </a>
             </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', height: 44 }} disabled={loading}>
-              {loading ? '⏳ Signing in...' : `🔐 ${t('signIn')}`}
+            <button type="submit" className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', height: 44 }} disabled={loading}>
+              {loading ? `⏳ ${t('signingIn')}` : `🔐 ${t('signIn')}`}
             </button>
           </form>
         ) : (
@@ -213,7 +246,7 @@ export default function Login({ onBack }) {
             </div>
             <div className="form-group">
               <label className="form-label">{t('password')}</label>
-              <input type="password" className="form-control" placeholder="••••••••"
+              <input type="password" className="form-control" placeholder="min. 6 characters"
                 value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} required />
             </div>
             <div className="form-group">
@@ -221,8 +254,9 @@ export default function Login({ onBack }) {
               <input type="password" className="form-control" placeholder="••••••••"
                 value={form.confirm} onChange={e => setForm(p => ({ ...p, confirm: e.target.value }))} required />
             </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', height: 44 }} disabled={loading}>
-              {loading ? '⏳ Creating account...' : `🚀 ${t('signUp')}`}
+            <button type="submit" className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', height: 44 }} disabled={loading}>
+              {loading ? `⏳ ${t('creatingAccount')}` : `🚀 ${t('signUp')}`}
             </button>
           </form>
         )}
@@ -234,20 +268,24 @@ export default function Login({ onBack }) {
               <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Quick Demo Access</span>
               <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
             </div>
-
             <div style={{ display: 'flex', gap: 10 }}>
-              {DEMO_USERS.map(user => (
-                <button key={user.id}
+              {[
+                { role: 'employee', icon: '👤', label: 'Employee Demo' },
+                { role: 'manager', icon: '👔', label: 'Manager Demo' },
+              ].map(d => (
+                <button key={d.role}
                   className="btn btn-secondary"
                   style={{ flex: 1, justifyContent: 'center', flexDirection: 'column', height: 64, gap: 4 }}
-                  onClick={() => quickLogin(user)}
-                  disabled={loading}
-                >
-                  <span style={{ fontSize: 18 }}>{user.role === 'manager' ? '👔' : '👤'}</span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{user.role === 'manager' ? 'Manager Demo' : 'Employee Demo'}</span>
+                  onClick={() => handleDemoLogin(d.role)}
+                  disabled={loading}>
+                  <span style={{ fontSize: 20 }}>{d.icon}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{d.label}</span>
                 </button>
               ))}
             </div>
+            <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 10 }}>
+              Demo accounts are created automatically in your Supabase project
+            </p>
           </>
         )}
       </div>
