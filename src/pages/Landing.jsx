@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { getCurrentEthDate, ETH_MONTHS, ETH_MONTHS_EN } from '../data/mockData';
 
 const FEATURES = [
   { icon: '⏱️', title: 'Smart Time Tracking', titleAm: 'ብልሃተኛ የሰዓት መከታተያ', desc: 'Automatically calculate worked time (ስራ ላይ የዋለ ሰዓት) and wasted time (የባከነ ሰዓት) with real-time analytics.' },
@@ -71,6 +72,9 @@ const FAQ = [
 
 export default function Landing({ onNavigateToLogin }) {
   const { t, language, setLanguage, darkMode, setDarkMode } = useApp();
+  const ethToday = getCurrentEthDate();
+  const currentEthMonthName = ETH_MONTHS[ethToday.month - 1];
+  const currentEthMonthNameEn = ETH_MONTHS_EN[ethToday.month - 1];
   const [openFaq, setOpenFaq] = useState(null);
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
   const [msgSent, setMsgSent] = useState(false);
@@ -312,9 +316,11 @@ export default function Landing({ onNavigateToLogin }) {
           <div className="card" style={{ padding: '1.5rem' }}>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <div style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: "'Noto Sans Ethiopic', sans-serif" }}>
-                ጥቅምት 2016 EC
+                {currentEthMonthName} {ethToday.year} EC
               </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Tikimit 2016 · October 2023</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                {currentEthMonthNameEn} {ethToday.year} · {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
               {['እሑ', 'ሰኞ', 'ማክ', 'ረቡ', 'ሓሙ', 'ዓር', 'ቅዳ'].map((d, i) => (
@@ -523,7 +529,7 @@ export default function Landing({ onNavigateToLogin }) {
             ))}
           </div>
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 20, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-            <span style={{ fontSize: '0.8125rem' }}>© 2016 EC (2024) ሰዓት ETMS. All rights reserved.</span>
+            <span style={{ fontSize: '0.8125rem' }}>© {ethToday.year} EC ({new Date().getFullYear()}) ሰዓት ETMS. All rights reserved.</span>
             <span style={{ fontSize: '0.8125rem' }}>Made with ❤️ for Ethiopia 🇪🇹</span>
           </div>
         </div>
