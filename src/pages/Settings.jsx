@@ -349,7 +349,10 @@ export default function Settings() {
                   label: 'Calendar System', value: 'Ethiopian Calendar (EC)', desc: 'Primary calendar for tracking'
                 },
                 {
-                  label: 'Fiscal Year Start', value: '1 Meskerem', desc: 'Ethiopian fiscal year beginning'
+                  label: 'Fiscal Year Start', value: 'Hamle 1', desc: 'Ethiopian government fiscal year: Hamle 1 – Sene 30'
+                },
+                {
+                  label: 'Fiscal Year End', value: 'Sene 30', desc: 'Current FY: Hamle 1, 2017 – Sene 30, 2018 EC'
                 },
                 {
                   label: 'Overtime Threshold', value: '8 hours/day', desc: 'Hours after which overtime is counted'
@@ -376,7 +379,7 @@ export default function Settings() {
                   <div>
                     <div style={{ fontWeight: 600 }}>System Version</div>
                     <div>ሰዓት ETMS v2.0.0 — Ethiopian Time Management System</div>
-                    <div style={{ fontSize: '0.75rem', color: 'inherit', marginTop: 2 }}>Last updated: Nehase 2016 EC</div>
+                    <div style={{ fontSize: '0.75rem', color: 'inherit', marginTop: 2 }}>Last updated: Sene 2018 EC</div>
                   </div>
                 </div>
               </div>

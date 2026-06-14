@@ -304,7 +304,7 @@ export default function Landing({ onNavigateToLogin }) {
               {[
                 '✅ All 13 Ethiopian months (12×30 + Pagume)',
                 '✅ Ethiopian public holidays automatically blocked',
-                '✅ Fiscal year tracking (Meskerem to Nehase)',
+                '✅ Fiscal year tracking (Hamle 1 → Sene 30)',
                 '✅ EC ↔ Gregorian date conversion',
                 '✅ Reports in Ethiopian dates',
               ].map((item, i) => (

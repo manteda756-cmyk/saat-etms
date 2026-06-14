@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   ETH_MONTHS, ETH_MONTHS_EN, ETH_DAYS, ETH_DAYS_EN,
-  ETH_HOLIDAYS_2016, getCurrentEthDate, formatEthDate, gregToEth, ethToGreg
+  ETH_HOLIDAYS_2016, getCurrentEthDate, formatEthDate,
+  gregToEth, ethToGreg, getEthFiscalYear, getFiscalYearProgress,
 } from '../data/mockData';
 
 function CalendarGrid({ year, month, lang }) {
@@ -86,7 +87,7 @@ export default function EthiopianCalendar() {
           📅 {t('ethiopianCalendar')}
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          {formatEthDate(today.year, today.month, today.day, language)} — Fiscal Year: {today.year}/{today.year + 1} EC
+          {formatEthDate(today.year, today.month, today.day, language)} — {t('fiscalYear')}: {getEthFiscalYear(today).display}
         </p>
       </div>
 
@@ -170,27 +171,47 @@ export default function EthiopianCalendar() {
               <div style={{ fontWeight: 700, marginBottom: 10 }}>💰 {t('fiscalYear')}</div>
               <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                 <div style={{ marginBottom: 6 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Start:</span> 1 Meskerem {today.year} EC
+                  <span style={{ color: 'var(--text-muted)' }}>Start: </span>
+                  <span style={{ fontWeight: 600, color: 'var(--et-green)' }}>
+                    {language === 'am'
+                      ? getEthFiscalYear(today).startLabelAm
+                      : getEthFiscalYear(today).startLabel}
+                  </span>
                 </div>
                 <div style={{ marginBottom: 6 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>End:</span> 30 Nehase {today.year} EC
+                  <span style={{ color: 'var(--text-muted)' }}>End: </span>
+                  <span style={{ fontWeight: 600, color: 'var(--danger)' }}>
+                    {language === 'am'
+                      ? getEthFiscalYear(today).endLabelAm
+                      : getEthFiscalYear(today).endLabel}
+                  </span>
+                </div>
+                <div style={{ marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>FY: </span>
+                  <span style={{ fontWeight: 600 }}>{getEthFiscalYear(today).display}</span>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Quarter:</span> Q{Math.ceil(today.month / 3)}
+                  <span style={{ color: 'var(--text-muted)' }}>Quarter: </span>
+                  <span style={{ fontWeight: 600 }}>
+                    Q{today.month >= 11 ? 1 : today.month >= 8 ? 4 : today.month >= 5 ? 3 : today.month >= 2 ? 2 : 1}
+                  </span>
                 </div>
               </div>
               <div style={{ marginTop: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Year progress</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>FY progress</span>
                   <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>
-                    {Math.round(((today.month - 1) * 30 + today.day) / 365 * 100)}%
+                    {getFiscalYearProgress(today)}%
                   </span>
                 </div>
                 <div className="progress-bar">
                   <div className="progress-fill" style={{
-                    width: `${Math.round(((today.month - 1) * 30 + today.day) / 365 * 100)}%`,
-                    background: 'var(--et-green)',
+                    width: `${getFiscalYearProgress(today)}%`,
+                    background: 'linear-gradient(90deg, var(--et-green), var(--primary))',
                   }} />
+                </div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                  Hamle 1 → Sene 30 · ሃምሌ 1 → ሰኔ 30
                 </div>
               </div>
             </div>

@@ -36,7 +36,7 @@ create table if not exists public.departments (
 
 insert into public.departments (name) values
   ('Engineering'), ('Marketing'), ('Finance'),
-  ('HR'), ('Operations'), ('Sales'), ('IT'), ('Legal')
+  ('HR'), ('Operations'), ('Sales'), ('IT'), ('Peace and Security')
 on conflict (name) do nothing;
 
 -- ------------------------------------------------

@@ -239,7 +239,7 @@ export default function Login({ onBack }) {
               <label className="form-label">{t('department')}</label>
               <select className="form-control" value={form.dept} onChange={e => setForm(p => ({ ...p, dept: e.target.value }))}>
                 <option value="">Select department</option>
-                {['Engineering', 'Finance', 'HR', 'Marketing', 'Operations', 'Sales', 'IT', 'Legal'].map(d => (
+                {['Engineering', 'Finance', 'HR', 'Marketing', 'Operations', 'Sales', 'IT', 'Peace and Security'].map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>

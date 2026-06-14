@@ -113,7 +113,7 @@ export const ETH_HOLIDAYS_2016 = [
 
 // Departments
 export const DEPARTMENTS = [
-  'Engineering', 'Marketing', 'Finance', 'HR', 'Operations', 'Sales', 'IT', 'Legal'
+  'Engineering', 'Marketing', 'Finance', 'HR', 'Operations', 'Sales', 'IT', 'Peace and Security'
 ];
 
 // Projects
@@ -131,7 +131,7 @@ export const EMPLOYEES = [
   { id: 6, name: 'Hana Mekonnen', nameAm: 'ሃና መኮንን', email: 'hana@company.et', dept: 'Operations', position: 'Operations Lead', avatar: null, initials: 'HM', status: 'present', workedHours: 9.25, productivity: 115, lateCount: 0, role: 'manager' },
   { id: 7, name: 'Yonas Tadesse', nameAm: 'ዮናስ ታደሰ', email: 'yonas@company.et', dept: 'Sales', position: 'Sales Executive', avatar: null, initials: 'YT', status: 'present', workedHours: 7.75, productivity: 97, lateCount: 1, role: 'employee' },
   { id: 8, name: 'Meron Bekele', nameAm: 'ሜሮን በቀለ', email: 'meron@company.et', dept: 'Engineering', position: 'Frontend Developer', avatar: null, initials: 'MB', status: 'leave', workedHours: 0, productivity: 0, lateCount: 0, role: 'employee' },
-  { id: 9, name: 'Biruk Assefa', nameAm: 'ብሩክ አሰፋ', email: 'biruk@company.et', dept: 'Legal', position: 'Legal Counsel', avatar: null, initials: 'BA', status: 'present', workedHours: 8.0, productivity: 100, lateCount: 0, role: 'employee' },
+  { id: 9, name: 'Biruk Assefa', nameAm: 'ብሩክ አሰፋ', email: 'biruk@company.et', dept: 'Peace and Security', position: 'Security Officer', avatar: null, initials: 'BA', status: 'present', workedHours: 8.0, productivity: 100, lateCount: 0, role: 'employee' },
   { id: 10, name: 'Selamawit Girma', nameAm: 'ሰላማዊት ግርማ', email: 'selam@company.et', dept: 'Engineering', position: 'Backend Developer', avatar: null, initials: 'SG', status: 'present', workedHours: 10.5, productivity: 131, lateCount: 0, role: 'employee' },
 ];
 
@@ -187,7 +187,7 @@ export const DEPT_PERFORMANCE = [
   { dept: 'Operations', productivity: 102, present: 10, total: 11 },
   { dept: 'Sales', productivity: 91, present: 9, total: 10 },
   { dept: 'IT', productivity: 89, present: 6, total: 7 },
-  { dept: 'Legal', productivity: 95, present: 4, total: 4 },
+  { dept: 'Peace and Security', productivity: 95, present: 4, total: 4 },
 ];
 
 // Leave requests
@@ -271,6 +271,44 @@ export function getProductivityColor(pct) {
   if (pct >= 90) return '#10b981';
   if (pct >= 75) return '#f59e0b';
   return '#ef4444';
+}
+
+// ─────────────────────────────────────────────────────────────
+// Ethiopian Government Fiscal Year
+// Hamle 1 → Sene 30 (month 11 day 1 → month 10 day 30)
+// Current fiscal year: Hamle 1, 2017 – Sene 30, 2018 EC
+// ─────────────────────────────────────────────────────────────
+export function getEthFiscalYear(ethDate) {
+  // Ethiopian fiscal year runs Hamle 1 (month 11) to Sene 30 (month 10) of next year
+  // If current month >= Hamle (11), fiscal year started this EC year
+  // If current month <= Sene (10), fiscal year started previous EC year
+  const fyStart = ethDate.month >= 11 ? ethDate.year : ethDate.year - 1;
+  const fyEnd = fyStart + 1;
+  return {
+    startYear: fyStart,
+    endYear: fyEnd,
+    startLabel: `Hamle 1, ${fyStart} EC`,
+    endLabel: `Sene 30, ${fyEnd} EC`,
+    startLabelAm: `ሃምሌ 1፣ ${fyStart} ዓ.ም`,
+    endLabelAm: `ሰኔ 30፣ ${fyEnd} ዓ.ም`,
+    display: `${fyStart}/${fyEnd} EC`,
+  };
+}
+
+// Progress through current fiscal year (0–100%)
+export function getFiscalYearProgress(ethDate) {
+  // FY starts Hamle 1 (month 11), ends Sene 30 (month 10, next year)
+  // Total days = 30*12 = 360 days (simplified, ignoring Pagume)
+  let monthsElapsed;
+  if (ethDate.month >= 11) {
+    // We are in Hamle–Nehase–Pagume (months 11,12,13) of the start year
+    monthsElapsed = ethDate.month - 11;
+  } else {
+    // We are in Meskerem–Sene (months 1–10) of the end year
+    monthsElapsed = ethDate.month + 2; // 3 months from FY start + current months
+  }
+  const daysElapsed = monthsElapsed * 30 + ethDate.day;
+  return Math.min(Math.round((daysElapsed / 360) * 100), 100);
 }
 
 export function greetingByTime(t) {
