@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 
 export default function Settings() {
   const { t, language, setLanguage, darkMode, setDarkMode, currentUser } = useApp();
@@ -14,14 +15,57 @@ export default function Settings() {
   });
   const [saved, setSaved] = useState(false);
   const [notifications, setNotifications] = useState({
-    emailAlerts: true,
-    smsAlerts: false,
-    lateArrival: true,
-    overtime: true,
-    leaveApproval: true,
-    dailyReport: false,
-    weeklyReport: true,
+    emailAlerts: true, smsAlerts: false, lateArrival: true,
+    overtime: true, leaveApproval: true, dailyReport: false, weeklyReport: true,
   });
+
+  // Role management state
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [roleMsg, setRoleMsg] = useState('');
+
+  const isAdmin = currentUser?.role === 'admin';
+
+  // Load all profiles when admin opens user-management tab
+  useEffect(() => {
+    if (activeTab === 'users' && isAdmin) {
+      setUsersLoading(true);
+      supabase
+        .from('profiles')
+        .select('id, full_name, email, role, department, is_active')
+        .order('full_name')
+        .then(({ data, error }) => {
+          if (!error && data) setUsers(data);
+          setUsersLoading(false);
+        });
+    }
+  }, [activeTab, isAdmin]);
+
+  const handleRoleChange = async (userId, newRole) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId);
+
+    if (!error) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      setRoleMsg(`✅ Role updated to ${newRole}`);
+      setTimeout(() => setRoleMsg(''), 3000);
+    } else {
+      setRoleMsg('❌ Failed to update role: ' + error.message);
+    }
+  };
+
+  const handleToggleActive = async (userId, currentStatus) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_active: !currentStatus })
+      .eq('id', userId);
+
+    if (!error) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_active: !currentStatus } : u));
+    }
+  };
 
   const handleSave = () => {
     setSaved(true);
@@ -45,13 +89,14 @@ export default function Settings() {
         {/* Sidebar */}
         <div className="card" style={{ padding: '8px', height: 'fit-content' }}>
           {[
-            { id: 'profile', label: 'Profile', icon: '👤' },
-            { id: 'language', label: 'Language', icon: '🌐' },
-            { id: 'appearance', label: 'Appearance', icon: '🎨' },
-            { id: 'notifications', label: 'Notifications', icon: '🔔' },
-            { id: 'security', label: 'Security', icon: '🔐' },
-            { id: 'system', label: 'System', icon: '⚙' },
-          ].map(tab => (
+            { id: 'profile',       label: 'Profile',       icon: '👤', adminOnly: false },
+            { id: 'language',      label: 'Language',      icon: '🌐', adminOnly: false },
+            { id: 'appearance',    label: 'Appearance',    icon: '🎨', adminOnly: false },
+            { id: 'notifications', label: 'Notifications', icon: '🔔', adminOnly: false },
+            { id: 'security',      label: 'Security',      icon: '🔐', adminOnly: false },
+            { id: 'users',         label: 'User Roles',    icon: '👥', adminOnly: true  },
+            { id: 'system',        label: 'System',        icon: '⚙',  adminOnly: false },
+          ].filter(tab => !tab.adminOnly || isAdmin).map(tab => (
             <button
               key={tab.id}
               className={`nav-item${activeTab === tab.id ? ' active' : ''}`}
@@ -281,7 +326,6 @@ export default function Settings() {
           {activeTab === 'security' && (
             <div>
               <h3 style={{ fontWeight: 700, marginBottom: 20 }}>🔐 Security Settings</h3>
-
               <div className="form-group">
                 <label className="form-label">Current Password</label>
                 <input type="password" className="form-control" placeholder="••••••••" />
@@ -294,11 +338,8 @@ export default function Settings() {
                 <label className="form-label">Confirm New Password</label>
                 <input type="password" className="form-control" placeholder="••••••••" />
               </div>
-
               <button className="btn btn-primary" style={{ marginBottom: 20 }}>Update Password</button>
-
               <div className="divider" />
-
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontWeight: 600, marginBottom: 8 }}>Two-Factor Authentication (MFA)</div>
                 <div className="alert alert-warning">
@@ -307,12 +348,11 @@ export default function Settings() {
                 </div>
                 <button className="btn btn-success btn-sm">Enable MFA</button>
               </div>
-
               <div>
                 <div style={{ fontWeight: 600, marginBottom: 8 }}>Active Sessions</div>
                 {[
                   { device: 'Chrome on Windows', location: 'Addis Ababa, ET', time: 'Active now', current: true },
-                  { device: 'Firefox on MacOS', location: 'Addis Ababa, ET', time: '2 days ago', current: false },
+                  { device: 'Firefox on MacOS',  location: 'Addis Ababa, ET', time: '2 days ago', current: false },
                 ].map((s, i) => (
                   <div key={i} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -323,14 +363,148 @@ export default function Settings() {
                       <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>{s.device}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{s.location} · {s.time}</div>
                     </div>
-                    {s.current ? (
-                      <span className="badge badge-success">Current</span>
-                    ) : (
-                      <button className="btn btn-danger btn-sm">Revoke</button>
-                    )}
+                    {s.current
+                      ? <span className="badge badge-success">Current</span>
+                      : <button className="btn btn-danger btn-sm">Revoke</button>}
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* ── USER ROLES (admin only) ── */}
+          {activeTab === 'users' && isAdmin && (
+            <div>
+              <h3 style={{ fontWeight: 700, marginBottom: 6 }}>👥 User Role Management</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: 20 }}>
+                Promote or demote employees. Only admins can access this panel.
+              </p>
+
+              {roleMsg && (
+                <div className={`alert ${roleMsg.startsWith('✅') ? 'alert-success' : 'alert-danger'}`} style={{ marginBottom: 16 }}>
+                  {roleMsg}
+                </div>
+              )}
+
+              {/* Role legend */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+                {[
+                  { role: 'employee', color: '#94a3b8', desc: 'View & log own data only' },
+                  { role: 'manager',  color: '#f59e0b', desc: 'Approve leaves & overtime, view team' },
+                  { role: 'admin',    color: '#ef4444', desc: 'Full access + user management' },
+                ].map(r => (
+                  <div key={r.role} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                    background: 'var(--surface-2)', border: '1px solid var(--border)',
+                    fontSize: '0.8125rem',
+                  }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
+                    <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{r.role}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>— {r.desc}</span>
+                  </div>
+                ))}
+              </div>
+
+              {usersLoading ? (
+                <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
+                  ⏳ Loading users...
+                </div>
+              ) : users.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>👥</div>
+                  <div>No users found. Run the Supabase schema first.</div>
+                </div>
+              ) : (
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Current Role</th>
+                        <th>Change Role</th>
+                        <th>Status</th>
+                        <th>Active</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map(user => (
+                        <tr key={user.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div className="avatar" style={{ width: 30, height: 30, fontSize: 11 }}>
+                                {user.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{user.full_name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="badge badge-gray" style={{ fontSize: '0.6875rem' }}>
+                              {user.department || '—'}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`badge ${
+                              user.role === 'admin'    ? 'badge-danger' :
+                              user.role === 'manager'  ? 'badge-warning' : 'badge-gray'
+                            }`} style={{ textTransform: 'capitalize' }}>
+                              {user.role === 'admin' ? '🛡️ ' : user.role === 'manager' ? '👔 ' : '👤 '}
+                              {user.role}
+                            </span>
+                          </td>
+                          <td>
+                            {/* Don't allow changing own role */}
+                            {user.id === currentUser?.id ? (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Your account</span>
+                            ) : (
+                              <select
+                                value={user.role}
+                                onChange={e => handleRoleChange(user.id, e.target.value)}
+                                className="form-control"
+                                style={{ padding: '4px 28px 4px 8px', fontSize: '0.8125rem', width: 130 }}
+                              >
+                                <option value="employee">👤 Employee</option>
+                                <option value="manager">👔 Manager</option>
+                                <option value="admin">🛡️ Admin</option>
+                              </select>
+                            )}
+                          </td>
+                          <td>
+                            <span className={`badge ${user.is_active ? 'badge-success' : 'badge-danger'}`}>
+                              {user.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td>
+                            {user.id !== currentUser?.id && (
+                              <div
+                                onClick={() => handleToggleActive(user.id, user.is_active)}
+                                title={user.is_active ? 'Deactivate' : 'Activate'}
+                                style={{
+                                  width: 40, height: 22, borderRadius: 11,
+                                  background: user.is_active ? 'var(--success)' : 'var(--border)',
+                                  cursor: 'pointer', position: 'relative', transition: 'background 0.2s',
+                                }}
+                              >
+                                <div style={{
+                                  position: 'absolute', top: 2,
+                                  left: user.is_active ? 20 : 2,
+                                  width: 18, height: 18, borderRadius: '50%',
+                                  background: 'white', transition: 'left 0.2s',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                }} />
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
